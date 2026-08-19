@@ -6,12 +6,15 @@ on:
   pull_request:
 
 env:
-  CGO_ENABLED: "0"
   GOWORK: "off"
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    # The race detector needs cgo at test time; the library itself stays
+    # CGO-free, which the cross-build job proves with CGO_ENABLED=0.
+    env:
+      CGO_ENABLED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -26,7 +29,7 @@ jobs:
             exit 1
           fi
       - name: Vet
-        run: go vet ./...
+        run: CGO_ENABLED=0 go vet ./...
       - name: Test with coverage (race)
         run: go test -race -covermode=atomic -coverprofile=cover.out ./...
       - name: Enforce 100% coverage
@@ -37,6 +40,8 @@ jobs:
 
   cross-build:
     runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: "0"
     strategy:
       fail-fast: false
       matrix:
