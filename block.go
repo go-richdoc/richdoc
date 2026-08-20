@@ -12,8 +12,13 @@ type Block interface {
 
 // Heading is a section heading. Level is 1..6, following the common HTML/
 // Markdown convention (1 is the most prominent).
+//
+// ID is an optional anchor identifier for the heading (a Markdown heading
+// anchor, a LaTeX \section immediately followed by \label). An empty ID means
+// the heading carries no explicit anchor.
 type Heading struct {
 	Level   int
+	ID      string
 	Inlines []Inline
 }
 

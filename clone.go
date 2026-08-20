@@ -119,6 +119,15 @@ func cloneInline(in Inline) Inline {
 	case Link:
 		n.Inlines = cloneInlines(n.Inlines)
 		return n
+	case Footnote:
+		n.Blocks = cloneBlocks(n.Blocks)
+		return n
+	case Anchor:
+		n.Inlines = cloneInlines(n.Inlines)
+		return n
+	case CrossRef:
+		n.Inlines = cloneInlines(n.Inlines)
+		return n
 	default:
 		// Text, Code, Image, Math, LineBreak, RawInline hold no nested
 		// slices, so copying the value is already a deep copy.

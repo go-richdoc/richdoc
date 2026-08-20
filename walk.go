@@ -95,6 +95,14 @@ func walkInline(in Inline, v Visitor) {
 			walkInlines(n.Inlines, v)
 		case Link:
 			walkInlines(n.Inlines, v)
+		case Footnote:
+			for _, c := range n.Blocks {
+				walkBlock(c, v)
+			}
+		case Anchor:
+			walkInlines(n.Inlines, v)
+		case CrossRef:
+			walkInlines(n.Inlines, v)
 		}
 	}
 	v.Leave(in)
