@@ -66,6 +66,45 @@ type RawInline struct {
 	Text   string
 }
 
+// Footnote is a footnote placed inline, whose content is block-level (LaTeX
+// \footnote, an ODF footnote, a Markdown [^id] reference with its definition).
+// Blocks holds the note body; it appears at the position the note is
+// referenced, and a writer is free to relocate the body to the page or
+// document end.
+type Footnote struct {
+	Blocks []Block
+}
+
+// Anchor is a labeled target attached to inline content: the destination a
+// [CrossRef] points at (a LaTeX \label, an ODF bookmark, a Markdown heading
+// anchor target). ID is the label; Inlines is the content the label marks and
+// may be empty for a point target that carries no visible text of its own.
+type Anchor struct {
+	ID      string
+	Inlines []Inline
+}
+
+// RefKind distinguishes the two kinds of reference a [CrossRef] can be.
+type RefKind int
+
+// Reference kinds. RefLabel is a cross-reference to a labeled target (LaTeX
+// \ref/\eqref, a Markdown link to an internal id); RefCite is a citation of a
+// bibliographic key (LaTeX \cite).
+const (
+	RefLabel RefKind = iota
+	RefCite
+)
+
+// CrossRef is a reference to an [Anchor]/label or a bibliographic citation.
+// Target is the label or citation key it resolves to and Kind selects between
+// the two. Inlines is the visible text; when it is empty the renderer or
+// writer supplies the resolved number or label.
+type CrossRef struct {
+	Target  string
+	Kind    RefKind
+	Inlines []Inline
+}
+
 func (Text) isInline()          {}
 func (Emph) isInline()          {}
 func (Strong) isInline()        {}
@@ -76,3 +115,6 @@ func (Image) isInline()         {}
 func (Math) isInline()          {}
 func (LineBreak) isInline()     {}
 func (RawInline) isInline()     {}
+func (Footnote) isInline()      {}
+func (Anchor) isInline()        {}
+func (CrossRef) isInline()      {}

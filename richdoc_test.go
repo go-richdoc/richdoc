@@ -275,3 +275,208 @@ func TestBuilderOListClampsStart(t *testing.T) {
 		t.Fatalf("OList start not clamped: %+v", l)
 	}
 }
+
+// refDoc builds a document exercising the v0.2.0 additions (Footnote, Anchor,
+// CrossRef and Heading.ID) with non-nil nested slices throughout.
+func refDoc() *Document {
+	return New().
+		Add(Heading{Level: 2, ID: "sec", Inlines: []Inline{Txt("Sec")}}).
+		P(
+			Txt("body"),
+			Note(Paragraph{Inlines: []Inline{Txt("note")}}),
+			Mark("lbl", Txt("here")),
+			Ref("sec", Txt("2")),
+			Cite("knuth", Txt("K")),
+		).
+		Doc()
+}
+
+func TestNewNodeHelpersMatchLiterals(t *testing.T) {
+	// The helpers must build exactly the same values as the struct literals.
+	if got, want := Note(Paragraph{}), (Footnote{Blocks: []Block{Paragraph{}}}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Note: got %+v want %+v", got, want)
+	}
+	if got, want := Mark("id", Txt("x")), (Anchor{ID: "id", Inlines: []Inline{Txt("x")}}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Mark: got %+v want %+v", got, want)
+	}
+	// A point Anchor may carry no inlines.
+	if got := Mark("id"); got.ID != "id" || got.Inlines != nil {
+		t.Fatalf("point Mark: got %+v", got)
+	}
+	if got, want := Ref("t", Txt("x")), (CrossRef{Target: "t", Kind: RefLabel, Inlines: []Inline{Txt("x")}}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Ref: got %+v want %+v", got, want)
+	}
+	if got, want := Cite("t", Txt("x")), (CrossRef{Target: "t", Kind: RefCite, Inlines: []Inline{Txt("x")}}); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Cite: got %+v want %+v", got, want)
+	}
+	if RefLabel != 0 || RefCite != 1 {
+		t.Fatalf("RefKind values changed: RefLabel=%d RefCite=%d", RefLabel, RefCite)
+	}
+}
+
+func TestWalkVisitsNewNodes(t *testing.T) {
+	v := &recordVisitor{}
+	Walk(refDoc(), v)
+
+	if len(v.enter) != len(v.leave) {
+		t.Fatalf("enter/leave mismatch: %d vs %d", len(v.enter), len(v.leave))
+	}
+	want := []string{
+		"*richdoc.Document",
+		"richdoc.Heading", "richdoc.Text",
+		"richdoc.Paragraph",
+		"richdoc.Text",
+		// Footnote descends into its block-level body.
+		"richdoc.Footnote", "richdoc.Paragraph", "richdoc.Text",
+		// Anchor descends into its inline content.
+		"richdoc.Anchor", "richdoc.Text",
+		// CrossRef (RefLabel then RefCite) descends into its visible inlines.
+		"richdoc.CrossRef", "richdoc.Text",
+		"richdoc.CrossRef", "richdoc.Text",
+	}
+	if !reflect.DeepEqual(v.enter, want) {
+		t.Fatalf("enter order:\n got %v\nwant %v", v.enter, want)
+	}
+}
+
+func TestWalkSkipNewNodesPrunesChildren(t *testing.T) {
+	// Pruning each new node skips its children but still fires Leave.
+	v := &recordVisitor{skip: func(n any) bool {
+		switch n.(type) {
+		case Footnote, Anchor, CrossRef:
+			return true
+		}
+		return false
+	}}
+	Walk(refDoc(), v)
+	want := []string{
+		"*richdoc.Document",
+		"richdoc.Heading", "richdoc.Text",
+		"richdoc.Paragraph",
+		"richdoc.Text",
+		"richdoc.Footnote",
+		"richdoc.Anchor",
+		"richdoc.CrossRef",
+		"richdoc.CrossRef",
+	}
+	if !reflect.DeepEqual(v.enter, want) {
+		t.Fatalf("pruned enter order:\n got %v\nwant %v", v.enter, want)
+	}
+}
+
+func TestPlainTextNewNodes(t *testing.T) {
+	// Footnote body text is included inline where the note occurs; Anchor and
+	// CrossRef emit their visible inlines but never their identifiers.
+	got := PlainText(refDoc())
+	want := "Sec\n" + "bodynotehere2K"
+	if got != want {
+		t.Fatalf("PlainText:\n got %q\nwant %q", got, want)
+	}
+
+	// A point Anchor and empty-text CrossRefs contribute nothing, and their
+	// ids/targets never leak into the text.
+	d := New().P(Mark("lbl"), Ref("sec"), Cite("knuth")).Doc()
+	if got := PlainText(d); got != "" {
+		t.Fatalf("expected empty plain text, got %q", got)
+	}
+}
+
+func TestCloneNewNodes(t *testing.T) {
+	orig := refDoc()
+	cl := Clone(orig)
+	if !reflect.DeepEqual(orig, cl) {
+		t.Fatalf("clone not equal to original")
+	}
+
+	// Heading.ID round-trips through Clone.
+	if cl.Blocks[0].(Heading).ID != "sec" {
+		t.Fatalf("Heading.ID not cloned: %+v", cl.Blocks[0])
+	}
+
+	// Deep-mutating the clone's new nodes must not touch the original.
+	p := cl.Blocks[1].(Paragraph)
+	p.Inlines[1].(Footnote).Blocks[0] = Paragraph{Inlines: []Inline{Txt("MUT")}}
+	p.Inlines[2].(Anchor).Inlines[0] = Txt("MUT")
+	p.Inlines[3].(CrossRef).Inlines[0] = Txt("MUT")
+
+	op := orig.Blocks[1].(Paragraph)
+	if got := blocksText(op.Inlines[1].(Footnote).Blocks); got != "note" {
+		t.Fatalf("footnote blocks shared, got %q", got)
+	}
+	if got := inlinesText(op.Inlines[2].(Anchor).Inlines); got != "here" {
+		t.Fatalf("anchor inlines shared, got %q", got)
+	}
+	if got := inlinesText(op.Inlines[3].(CrossRef).Inlines); got != "2" {
+		t.Fatalf("crossref inlines shared, got %q", got)
+	}
+
+	// The nil-slice paths of the new nodes clone cleanly too.
+	nd := &Document{Blocks: []Block{Paragraph{Inlines: []Inline{
+		Footnote{}, Anchor{ID: "a"}, CrossRef{Target: "t", Kind: RefCite},
+	}}}}
+	if !reflect.DeepEqual(nd, Clone(nd)) {
+		t.Fatalf("clone with nil new-node slices not equal")
+	}
+}
+
+// TestBackwardCompatUnchanged proves the v0.2.0 additions are non-breaking: a
+// document built entirely from v0.1.0 nodes walks, plain-texts and clones
+// byte-for-byte identically to before the additions.
+func TestBackwardCompatUnchanged(t *testing.T) {
+	// Walk order for the legacy fullDoc is unchanged.
+	v := &recordVisitor{}
+	Walk(fullDoc(), v)
+	wantWalk := []string{
+		"*richdoc.Document",
+		"richdoc.Heading", "richdoc.Text",
+		"richdoc.Paragraph",
+		"richdoc.Strong", "richdoc.Text",
+		"richdoc.Text",
+		"richdoc.Emph", "richdoc.Text",
+		"richdoc.Strikethrough", "richdoc.Text",
+		"richdoc.Code",
+		"richdoc.Link", "richdoc.Text",
+		"richdoc.Image",
+		"richdoc.Math",
+		"richdoc.LineBreak",
+		"richdoc.RawInline",
+		"richdoc.CodeBlock",
+		"richdoc.BlockQuote", "richdoc.Paragraph", "richdoc.Text",
+		"richdoc.List", "richdoc.ListItem", "richdoc.Paragraph", "richdoc.Text",
+		"richdoc.List", "richdoc.ListItem", "richdoc.Paragraph", "richdoc.Text",
+		"richdoc.Table",
+		"richdoc.Cell", "richdoc.Text",
+		"richdoc.Cell", "richdoc.Text",
+		"richdoc.ThematicBreak",
+		"richdoc.MathBlock",
+		"richdoc.RawBlock",
+		"richdoc.Paragraph", "richdoc.Text",
+	}
+	if !reflect.DeepEqual(v.enter, wantWalk) {
+		t.Fatalf("legacy walk order changed:\n got %v\nwant %v", v.enter, wantWalk)
+	}
+
+	// PlainText for the legacy document is unchanged.
+	wantText := "Title\n" +
+		"bold and italicgonexlink\n" +
+		"package main\n" +
+		"quoted\n" +
+		"u1\n" +
+		"o1\n" +
+		"h1 r1\n" +
+		"added"
+	if got := PlainText(fullDoc()); got != wantText {
+		t.Fatalf("legacy PlainText changed:\n got %q\nwant %q", got, wantText)
+	}
+
+	// Clone of the legacy document is unchanged and independent.
+	orig := fullDoc()
+	if !reflect.DeepEqual(orig, Clone(orig)) {
+		t.Fatalf("legacy clone not equal to original")
+	}
+
+	// A legacy Heading carries an empty ID, i.e. the field defaults are inert.
+	if fullDoc().Blocks[0].(Heading).ID != "" {
+		t.Fatalf("legacy Heading gained a non-empty ID")
+	}
+}

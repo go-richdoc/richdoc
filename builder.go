@@ -153,6 +153,25 @@ func Br() LineBreak { return LineBreak{} }
 // RawI builds a [RawInline] passthrough for the named format.
 func RawI(format, text string) RawInline { return RawInline{Format: format, Text: text} }
 
+// Note builds a [Footnote] whose body is the given blocks.
+func Note(blocks ...Block) Footnote { return Footnote{Blocks: blocks} }
+
+// Mark builds an [Anchor] labeling the given inlines with id. The inlines may
+// be omitted for a point target.
+func Mark(id string, inlines ...Inline) Anchor { return Anchor{ID: id, Inlines: inlines} }
+
+// Ref builds a [CrossRef] of kind [RefLabel] to target. The inlines are the
+// visible text and may be omitted for the writer to resolve.
+func Ref(target string, inlines ...Inline) CrossRef {
+	return CrossRef{Target: target, Kind: RefLabel, Inlines: inlines}
+}
+
+// Cite builds a [CrossRef] of kind [RefCite] citing target. The inlines are
+// the visible text and may be omitted for the writer to resolve.
+func Cite(target string, inlines ...Inline) CrossRef {
+	return CrossRef{Target: target, Kind: RefCite, Inlines: inlines}
+}
+
 // Structural constructor helpers.
 
 // Item builds a [ListItem] holding the given blocks.

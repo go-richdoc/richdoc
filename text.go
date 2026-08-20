@@ -11,7 +11,10 @@ import "strings"
 //
 // It concatenates the values of [Text] and [Code] inlines and of [CodeBlock]
 // blocks, descending through every container (headings, lists, quotes, table
-// cells, and emphasis-like inlines). Nodes that carry no literal text in that
+// cells, and emphasis-like inlines). A [Footnote] contributes its body text
+// inline at the position it occurs, because footnotes are document text a
+// search should find; an [Anchor] and a [CrossRef] contribute their visible
+// inlines but not their identifiers. Nodes that carry no literal text in that
 // sense contribute nothing: [ThematicBreak], [LineBreak], [Image], [Math],
 // [MathBlock], [RawInline] and [RawBlock]. It returns "" for a nil document.
 func PlainText(d *Document) string {
@@ -92,6 +95,12 @@ func inlineText(in Inline) string {
 	case Strikethrough:
 		return inlinesText(n.Inlines)
 	case Link:
+		return inlinesText(n.Inlines)
+	case Footnote:
+		return blocksText(n.Blocks)
+	case Anchor:
+		return inlinesText(n.Inlines)
+	case CrossRef:
 		return inlinesText(n.Inlines)
 	}
 	return ""
