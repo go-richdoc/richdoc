@@ -89,7 +89,8 @@ func cloneCells(cells []Cell) []Cell {
 	}
 	out := make([]Cell, len(cells))
 	for i, c := range cells {
-		out[i] = Cell{Inlines: cloneInlines(c.Inlines)}
+		c.Inlines = cloneInlines(c.Inlines)
+		out[i] = c
 	}
 	return out
 }

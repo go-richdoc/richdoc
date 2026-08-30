@@ -230,6 +230,20 @@ func TestCloneNil(t *testing.T) {
 	}
 }
 
+// TestCloneCellSpanFields guards against cloneCells rebuilding each Cell
+// from just its Inlines field — an easy mistake once Cell gains fields
+// beyond Inlines, and one this test would have caught: a first version of
+// ColSpan/RowSpan support did exactly that, silently dropping both on
+// every Clone.
+func TestCloneCellSpanFields(t *testing.T) {
+	orig := New().Table(nil, nil, [][]Cell{{{Inlines: []Inline{Txt("x")}, ColSpan: 2, RowSpan: 3}}}).Doc()
+	cl := Clone(orig)
+	cell := cl.Blocks[0].(Table).Rows[0][0]
+	if cell.ColSpan != 2 || cell.RowSpan != 3 {
+		t.Fatalf("clone dropped span fields: got ColSpan=%d RowSpan=%d, want 2 and 3", cell.ColSpan, cell.RowSpan)
+	}
+}
+
 func TestCloneNilFields(t *testing.T) {
 	// A document with nil Meta and nil nested slices exercises every
 	// nil-guard in the clone helpers.

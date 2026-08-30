@@ -70,8 +70,17 @@ type Table struct {
 }
 
 // Cell is a single table cell holding inline content.
+//
+// ColSpan and RowSpan are the number of columns/rows this cell occupies.
+// Zero, the default — what an existing Cell{Inlines: ...} literal or a
+// [Td] call already produces, with no field for either — means the same
+// as 1: an ordinary cell spanning nothing extra. A converter that has no
+// notion of spanning cells at all (a plain CommonMark table, say) never
+// needs to touch these fields to keep working correctly.
 type Cell struct {
 	Inlines []Inline
+	ColSpan int
+	RowSpan int
 }
 
 // ThematicBreak is a horizontal rule separating content.
