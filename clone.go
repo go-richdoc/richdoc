@@ -41,20 +41,41 @@ func cloneBlock(b Block) Block {
 		return n
 	case Paragraph:
 		n.Inlines = cloneInlines(n.Inlines)
+		n.Classes = cloneStrings(n.Classes)
 		return n
 	case List:
 		n.Items = cloneItems(n.Items)
+		n.Classes = cloneStrings(n.Classes)
 		return n
 	case BlockQuote:
 		n.Blocks = cloneBlocks(n.Blocks)
+		n.Classes = cloneStrings(n.Classes)
 		return n
 	case Table:
 		return cloneTable(n)
+	case CodeBlock:
+		// Text and Language are values; Classes is not, which is why this can
+		// no longer fall to the default below.
+		n.Classes = cloneStrings(n.Classes)
+		return n
 	default:
-		// CodeBlock, ThematicBreak, MathBlock, RawBlock hold no nested
-		// slices, so copying the value is already a deep copy.
+		// ThematicBreak, MathBlock, RawBlock hold no nested slices, so copying
+		// the value is already a deep copy.
 		return b
 	}
+}
+
+// cloneStrings copies a Classes slice. Without it a clone SHARED the original's
+// classes, so appending to one document's classes appended to the other's --
+// exactly the aliasing Clone exists to prevent, and invisible until someone
+// mutated a copy.
+func cloneStrings(in []string) []string {
+	if in == nil {
+		return nil
+	}
+	out := make([]string, len(in))
+	copy(out, in)
+	return out
 }
 
 func cloneItems(items []ListItem) []ListItem {
@@ -69,7 +90,7 @@ func cloneItems(items []ListItem) []ListItem {
 }
 
 func cloneTable(t Table) Table {
-	out := Table{Header: cloneCells(t.Header)}
+	out := Table{Header: cloneCells(t.Header), Classes: cloneStrings(t.Classes)}
 	if t.Align != nil {
 		out.Align = make([]Alignment, len(t.Align))
 		copy(out.Align, t.Align)
@@ -129,9 +150,15 @@ func cloneInline(in Inline) Inline {
 	case CrossRef:
 		n.Inlines = cloneInlines(n.Inlines)
 		return n
+	case Code:
+		n.Classes = cloneStrings(n.Classes)
+		return n
+	case Image:
+		n.Classes = cloneStrings(n.Classes)
+		return n
 	default:
-		// Text, Code, Image, Math, LineBreak, RawInline hold no nested
-		// slices, so copying the value is already a deep copy.
+		// Text, Math, LineBreak and RawInline hold no nested slices, so copying
+		// the value is already a deep copy.
 		return in
 	}
 }
