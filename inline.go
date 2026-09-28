@@ -30,8 +30,11 @@ type Strikethrough struct {
 }
 
 // Code is an inline code span. Value is the verbatim code.
+//
+// Classes are the author's own presentational names for it; see [Classes].
 type Code struct {
-	Value string
+	Value   string
+	Classes []string
 }
 
 // Link is a hyperlink wrapping inline content. Title is an optional advisory
@@ -44,10 +47,33 @@ type Link struct {
 
 // Image is an inline image reference. Alt is the textual alternative and Title
 // an optional advisory title.
+//
+// Width and Height are the requested display size as the author wrote it,
+// including its unit: "200" (no unit, meaning pixels or big points depending on
+// the target), "50%", "4em". Scale is a percentage applied to the intrinsic
+// size, 0 meaning "not given" — a zero-percent image being meaningless, there is
+// no need for a pointer. Align is the horizontal placement; [AlignDefault]
+// leaves it to the renderer.
+//
+// These four are not decoration. Every format that can size an image at all
+// needs them — reST's ":width:"/":align:", LaTeX's
+// \includegraphics[width=,height=,scale=], HTML's width/height — and a model
+// without them forces each converter to drop what the author asked for. 43 of
+// the 79 standalone images in go-richdoc/rst's 1564-document corpus carry at
+// least one.
+//
+// A converter whose format cannot express them ignores them, exactly as it
+// already ignores Title: CommonMark has no syntax for a size, so
+// go-richdoc/markdown emits the same "![alt](url)" it always did.
 type Image struct {
-	URL   string
-	Alt   string
-	Title string
+	URL     string
+	Alt     string
+	Title   string
+	Width   string
+	Height  string
+	Scale   int
+	Align   Alignment
+	Classes []string
 }
 
 // Math is inline mathematics, carrying its TeX source.

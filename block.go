@@ -23,8 +23,11 @@ type Heading struct {
 }
 
 // Paragraph is a run of inline content forming a single logical paragraph.
+//
+// Classes are the author's own presentational names for it; see [Classes].
 type Paragraph struct {
 	Inlines []Inline
+	Classes []string
 }
 
 // List is an ordered or unordered list.
@@ -37,6 +40,7 @@ type List struct {
 	Start   int
 	Tight   bool
 	Items   []ListItem
+	Classes []string
 }
 
 // ListItem is a single entry of a [List]. Items hold blocks, which makes
@@ -51,11 +55,13 @@ type ListItem struct {
 type CodeBlock struct {
 	Language string
 	Text     string
+	Classes  []string
 }
 
 // BlockQuote is a quotation containing nested blocks.
 type BlockQuote struct {
-	Blocks []Block
+	Blocks  []Block
+	Classes []string
 }
 
 // Table is a simple grid with an optional header row.
@@ -64,9 +70,10 @@ type BlockQuote struct {
 // remaining columns at [AlignDefault]. Header may be empty for a headerless
 // table. Rows is a list of rows, each a slice of cells.
 type Table struct {
-	Align  []Alignment
-	Header []Cell
-	Rows   [][]Cell
+	Align   []Alignment
+	Header  []Cell
+	Rows    [][]Cell
+	Classes []string
 }
 
 // Cell is a single table cell holding inline content.

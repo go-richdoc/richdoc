@@ -32,3 +32,23 @@ type Document struct {
 	Blocks []Block
 	Meta   map[string]string
 }
+
+// Classes carry the presentational names an author attached to a node — reST's
+// ":class:" option and ".. class::" directive, sphinx's ".. rst-class::", an
+// HTML class attribute, a LaTeX \DUrole.
+//
+// They are the one deliberately UNSEMANTIC field in this model, and they are
+// here because dropping them loses the author's own words: measured over
+// go-richdoc/rst's 1564-document corpus, 187 class attributes in 57 files had
+// nowhere to go, on paragraphs, tables, images, block quotes, lists and code.
+// Every format in reach has somewhere to put them, and a model without them
+// forces each converter to discard what it was given.
+//
+// What they are NOT: a general attribute bag. Nothing in this package
+// interprets a class, no behaviour depends on one, and a converter whose format
+// has no equivalent ignores the field. A node's MEANING stays in its type — the
+// reason this model is a typed tree and not a map — and a class is a hint for
+// whoever renders it.
+//
+// The slice is nil when the author wrote none, which is the overwhelming common
+// case, so existing literals and Builder calls keep working unchanged.
