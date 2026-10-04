@@ -90,7 +90,11 @@ func cloneItems(items []ListItem) []ListItem {
 }
 
 func cloneTable(t Table) Table {
-	out := Table{Header: cloneCells(t.Header), Classes: cloneStrings(t.Classes)}
+	out := Table{
+		Caption: cloneInlines(t.Caption),
+		Header:  cloneCells(t.Header),
+		Classes: cloneStrings(t.Classes),
+	}
 	if t.Align != nil {
 		out.Align = make([]Alignment, len(t.Align))
 		copy(out.Align, t.Align)
@@ -111,6 +115,7 @@ func cloneCells(cells []Cell) []Cell {
 	out := make([]Cell, len(cells))
 	for i, c := range cells {
 		c.Inlines = cloneInlines(c.Inlines)
+		c.Blocks = cloneBlocks(c.Blocks)
 		out[i] = c
 	}
 	return out
