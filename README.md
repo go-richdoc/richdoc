@@ -25,6 +25,31 @@ sets**: each concrete type carries an unexported marker method, so consumers
 `RawBlock`/`RawInline` carry format-specific passthrough text for round-trip
 fidelity.
 
+### A cell can hold blocks (v0.5.0)
+
+reST's grid tables allow full block content in a cell, HTML's `<td>` allows any
+flow content, LaTeX's `tabular` allows a parbox. `Cell` therefore has both:
+
+```go
+type Cell struct {
+	Inlines []Inline // the flattened view, for a consumer that predates Blocks
+	Blocks  []Block  // the faithful content, when there is more than a paragraph
+	ColSpan int
+	RowSpan int
+}
+```
+
+The duplication is deliberate and its contract is short: a producer that sets
+`Blocks` must also set `Inlines`, a consumer reads whichever it can represent, and
+`Cell.Content()` is that preference order in one call — `Blocks` when present,
+otherwise the `Inlines` wrapped in a single `Paragraph`. A cell holding one
+paragraph, which is nearly all of them, still sets `Inlines` alone.
+
+It is measured, not speculative: over go-richdoc/rst's 1564-document corpus, 64
+list items, 61 line-block lines, 35 literal blocks and 23 bullet lists in 24 files
+were being flattened to a run of text. `Table.Caption []Inline` arrived with it,
+for 24 captions in 13 files.
+
 ## Utilities
 
 - `Walk(d *Document, v Visitor)` — depth-first traversal (`Enter`/`Leave`).

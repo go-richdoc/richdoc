@@ -52,3 +52,19 @@ type Document struct {
 //
 // The slice is nil when the author wrote none, which is the overwhelming common
 // case, so existing literals and Builder calls keep working unchanged.
+
+// A table CELL may hold block content, and [Cell] carries it twice on purpose:
+// Blocks is the faithful form and Inlines the flattened one a consumer that
+// predates Blocks still reads. [Cell.Content] is the preference order in one call.
+//
+// It is here for the same reason Classes is: measured over go-richdoc/rst's
+// 1564-document corpus, a cell that held more than one paragraph lost it. 64 list
+// items, 61 line-block lines, 35 literal blocks and 23 bullet lists, in 24 files,
+// were flattened to a run of text because the model had nowhere to put them.
+// reST's grid tables allow full block content in a cell, HTML's <td> allows any
+// flow content, and LaTeX's tabular allows a parbox: the formats are not the
+// constraint, the model was.
+//
+// [Table.Caption] arrived with it, for the same kind of reason and a smaller
+// number: 24 table captions in 13 files had nowhere to go, and every format that
+// has tables has a caption for them.

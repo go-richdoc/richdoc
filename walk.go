@@ -49,6 +49,7 @@ func walkBlock(b Block, v Visitor) {
 				walkBlock(c, v)
 			}
 		case Table:
+			walkInlines(n.Caption, v)
 			for _, c := range n.Header {
 				walkCell(c, v)
 			}
@@ -73,7 +74,18 @@ func walkItem(it ListItem, v Visitor) {
 
 func walkCell(c Cell, v Visitor) {
 	if v.Enter(c) {
-		walkInlines(c.Inlines, v)
+		// Blocks when the producer filled it, Inlines otherwise -- the same
+		// preference order as [Cell.Content], and not both: a cell that carries
+		// its content twice (see the Cell doc comment) would otherwise be
+		// visited twice, so a visitor counting words would double every cell
+		// that holds more than one paragraph.
+		if len(c.Blocks) > 0 {
+			for _, b := range c.Blocks {
+				walkBlock(b, v)
+			}
+		} else {
+			walkInlines(c.Inlines, v)
+		}
 	}
 	v.Leave(c)
 }
