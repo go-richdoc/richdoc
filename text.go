@@ -60,9 +60,18 @@ func blockText(b Block) string {
 
 func tableText(t Table) string {
 	var parts []string
+	if s := inlinesText(t.Caption); s != "" {
+		parts = append(parts, s)
+	}
 	add := func(cells []Cell) {
 		for _, c := range cells {
-			if s := inlinesText(c.Inlines); s != "" {
+			// Blocks or Inlines, never both: a cell that carries its content in
+			// both (see the Cell doc comment) would contribute its words twice.
+			s := inlinesText(c.Inlines)
+			if len(c.Blocks) > 0 {
+				s = blocksText(c.Blocks)
+			}
+			if s != "" {
 				parts = append(parts, s)
 			}
 		}
