@@ -46,7 +46,7 @@ otherwise the `Inlines` wrapped in a single `Paragraph`. A cell holding one
 paragraph, which is nearly all of them, still sets `Inlines` alone.
 
 It is measured, not speculative: over go-richdoc/rst's 1564-document corpus, 64
-list items, 61 line-block lines, 35 literal blocks and 23 bullet lists in 24 files
+list items, 47 lines in 14 line blocks, 35 literal blocks and 23 bullet lists in 24 files
 were being flattened to a run of text. `Table.Caption []Inline` arrived with it,
 for 24 captions in 13 files.
 

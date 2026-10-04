@@ -59,7 +59,7 @@ type Document struct {
 //
 // It is here for the same reason Classes is: measured over go-richdoc/rst's
 // 1564-document corpus, a cell that held more than one paragraph lost it. 64 list
-// items, 61 line-block lines, 35 literal blocks and 23 bullet lists, in 24 files,
+// items, 47 lines in 14 line blocks, 35 literal blocks and 23 bullet lists, in 24 files,
 // were flattened to a run of text because the model had nowhere to put them.
 // reST's grid tables allow full block content in a cell, HTML's <td> allows any
 // flow content, and LaTeX's tabular allows a parbox: the formats are not the
