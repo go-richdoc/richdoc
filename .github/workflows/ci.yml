@@ -35,8 +35,24 @@ jobs:
       - name: Enforce 100% coverage
         run: |
           go tool cover -func=cover.out
-          pct=$(go tool cover -func=cover.out | awk '/^total:/{print $3}' | tr -d '%')
-          awk -v p="$pct" 'BEGIN{exit (p+0<100.0)?1:0}'
+          # ⛔ THE PROFILE, NOT THE PERCENTAGE. "total: 99.95%" prints as
+          # 100.0%, so a gate reading the rounded figure passes with blocks
+          # nobody ran.
+          #
+          # ⛔ And the right test is NOT `grep ' 0$'`. A profile line is
+          # `file:from,to numStatements hitCount`, and this package has
+          # twenty-two lines ending in " 0 0": the marker methods that make
+          # Block and Inline closed sets have ZERO STATEMENTS, so they are
+          # empty blocks and not unrun ones. A grep on the hit count alone
+          # fails a package for having the very thing that makes its type
+          # switches exhaustive.
+          uncovered=$(awk '$NF == 0 && $(NF-1) > 0' cover.out)
+          if [ -n "$uncovered" ]; then
+            echo "::error::these blocks were never entered"
+            echo "$uncovered"
+            exit 1
+          fi
+          echo "every block with a statement in it was entered"
 
   cross-build:
     runs-on: ubuntu-latest
