@@ -1,0 +1,8 @@
+# ⛔ Agent worktrees live here, and each one is itself a git repository. A
+# `git add -A` records such a directory as a GITLINK — a commit id and nothing
+# else — silently, for every one it finds. One nearly went up with this commit.
+#
+# The barrier is the pre-push guard, which refuses an undeclared gitlink; this
+# entry is the convenience that keeps them out of `git status` in the first
+# place.
+/.claude/
