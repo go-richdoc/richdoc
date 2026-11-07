@@ -58,6 +58,48 @@ for 24 captions in 13 files.
 - `PlainText(d *Document) string` — textual content for search and previews.
 - `Clone(d *Document) *Document` — deep copy for undo snapshots and rewrites.
 
+## `bombtest` — the gate the readers' bomb tests run through
+
+A bomb test feeds a reader something enormous and asserts it is **refused**.
+Five readers in this family needed the same three guards, each had its own copy,
+and the copies are how the mistakes got made. So the questions live in
+[`richdoc/bombtest`](https://pkg.go.dev/github.com/go-richdoc/richdoc/bombtest)
+as fields with **no defaults**, and `Run` refuses a `Bound` that left any of
+them unanswered *before* the bomb allocates:
+
+```go
+bombtest.Run(t, bombtest.Bound{
+    Why:        "MaxSourceElements refuses before x/net/html builds anything",
+    AsksAtMost: 1 << 20,   // the figure that NAMES a regression
+    HeldAtMost: 256 << 20, // the host's safety net
+}, func() error { _, err := html.Parse(src, lim); return err })
+```
+
+⛔ **Two bounds, because a held-only bound protects by avoidance and hides what
+it avoids.** `GOMEMLIMIT` is a GC target, not an allocation refusal: a reader
+whose ceiling regressed does not reserve more memory under it, it makes the
+collector work harder — so the failure arrives as a test that takes minutes, and
+a slow test reads as a slow machine. `AsksAtMost` reads `TotalAlloc`, which is
+cumulative and cannot be collected away, so it fires at once with both numbers.
+
+⛔ **A delta of `Sys` is not expressible**, which is the mistake that prompted
+the package: `Sys` never shrinks, so `after - before` reports what a call *added*
+to whatever grew the arena before it. The same bomb measured **94 736 400** bytes
+run first and **40 386 560** run second, and a self-check for exactly this read
+164 292 904 − 164 292 904 = **0**, passing alone and failing last. `Result.Held`
+is absolute; `Result.Asked` is the `TotalAlloc` difference.
+
+⛔ The refusal assertion **cannot be switched off** — a bomb test that passes on
+an accepted document measures nothing. `Unbounded` is the derogation for one
+enormous allocation, which a soft limit cannot hold anyway; it drops exactly one
+check, **stamps** every run with `⛔ UNBOUNDED` and the reason, and leaves the
+rest in force.
+
+⛔ And `ulimit -v`, the hard version of `HeldAtMost`, is a **no-op on darwin**
+(RLIMIT_AS is ignored), so a shell guard protects CI and nothing on the machine
+where a bomb gets written. Hence the Go-side limit, and hence `Result.Held`
+being checked rather than trusted.
+
 ## Example
 
 ```go
